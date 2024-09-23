@@ -1,353 +1,248 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
-	"os"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-var defaultInput = `I love music.
-I love music.
-I love music.
+type Test struct {
+	input    []string
+	options  Options
+	expected []string
+}
 
-I love music of Kartik.
-I love music of Kartik.
-Thanks.
-I love music of Kartik.
-I love music of Kartik.
-`
+var testsOK = []Test{
+	{
+		input:    defaultInput,
+		options:  Options{},
+		expected: defaultResult,
+	},
+	{
+		input:    countInput,
+		options:  Options{Count: true},
+		expected: countResult,
+	},
+	{
+		input:    duplicateInput,
+		options:  Options{Duplicate: true},
+		expected: duplicateResult,
+	},
+	{
+		input:    uniqueInput,
+		options:  Options{Unique: true},
+		expected: uniqueResult,
+	},
+	{
+		input:    ignoreCaseInput,
+		options:  Options{IgnoreCase: true},
+		expected: ignoreCaseResult,
+	},
+	{
+		input:    skipFieldsInput,
+		options:  Options{SkipFields: 1},
+		expected: skipFieldsResult,
+	},
+	{
+		input:    skipCharsInput,
+		options:  Options{SkipChars: 1},
+		expected: skipCharsResult,
+	},
+	{
+		input:    skipFieldsCharsInput,
+		options:  Options{SkipFields: 1, SkipChars: 1},
+		expected: skipFieldsCharsResult,
+	},
+}
 
-var defaultResult = `I love music.
-
-I love music of Kartik.
-Thanks.
-I love music of Kartik.
-`
-
-var countInput = `I love music.
-I love music.
-I love music.
-
-I love music of Kartik.
-I love music of Kartik.
-Thanks.
-I love music of Kartik.
-I love music of Kartik.
-`
-
-var countResult = `3 I love music.
-1 
-2 I love music of Kartik.
-1 Thanks.
-2 I love music of Kartik.
-`
-
-var duplicateInput = `I love music.
-I love music.
-I love music.
-
-I love music of Kartik.
-I love music of Kartik.
-Thanks.
-I love music of Kartik.
-I love music of Kartik.
-`
-
-var duplicateResult = `I love music.
-I love music of Kartik.
-I love music of Kartik.
-`
-
-var uniqueInput = `I love music.
-I love music.
-I love music.
-
-I love music of Kartik.
-I love music of Kartik.
-Thanks.
-I love music of Kartik.
-I love music of Kartik.
-`
-
-var uniqueResult = `
-Thanks.
-`
-
-var ignoreCaseInput = `I LOVE MUSIC.
-I love music.
-I LoVe MuSiC.
-
-I love MuSIC of Kartik.
-I love music of kartik.
-Thanks.
-I love music of kartik.
-I love MuSIC of Kartik.
-`
-
-var ignoreCaseResult = `I LOVE MUSIC.
-
-I love MuSIC of Kartik.
-Thanks.
-I love music of kartik.
-`
-var skipFieldsInput = `We love music.
-I love music.
-They love music.
-
-I love music of Kartik.
-We love music of Kartik.
-Thanks.
-`
-
-var skipFieldsResult = `We love music.
-
-I love music of Kartik.
-Thanks.
-`
-
-var skipCharsInpit = `I love music.
-A love music.
-C love music.
-
-I love music of Kartik.
-We love music of Kartik.
-Thanks.
-`
-
-var skipCharsResult = `I love music.
-
-I love music of Kartik.
-We love music of Kartik.
-Thanks.
-`
-
-var skipFieldsCharsInput = `One I love music.
-Two A love music.
-Three C love music.
-
-I love music of Kartik.
-We love music of Kartik.
-Thanks.
-`
-
-var skipFieldsCharsResult = `One I love music.
-
-I love music of Kartik.
-Thanks.
-`
-
-func TestOkDefault(t *testing.T) {
-	in := bytes.NewBufferString(defaultInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing default failed: %s", err)
-	}
-	result := out.String()
-	if result != defaultResult {
-		t.Error("Testing default failed, result not match")
+func TestOK(t *testing.T) {
+	for _, test := range testsOK {
+		t.Run("", func(t *testing.T) {
+			result, err := uniq(test.input, test.options)
+			if err != nil {
+				t.Errorf("Error: %s", err)
+				return
+			}
+			require.Equal(t, result, test.expected, "The two words should be the same.")
+		})
 	}
 }
 
-func TestOkInputFile(t *testing.T) {
-	in, err := os.Open("testdata/input.txt")
-	if err != nil {
-		t.Errorf("Testing input file failed: %s", err)
-	}
-	defer in.Close()
+var testsFail = []Test{
+	{
+		input:   defaultInput,
+		options: Options{Count: true, Duplicate: true},
+	},
+	{
+		input:   defaultInput,
+		options: Options{Count: true, Unique: true},
+	},
+	{
+		input:   defaultInput,
+		options: Options{Unique: true, Duplicate: true},
+	},
+	{
+		input:   defaultInput,
+		options: Options{SkipFields: -10},
+	},
+	{
+		input:   defaultInput,
+		options: Options{SkipChars: -1},
+	},
+}
 
-	out := bytes.NewBuffer(nil)
-
-	options := Options{}
-
-	err = uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing input file failed: %s", err)
-	}
-
-	result := out.String()
-	if result != defaultResult {
-		t.Error("Testing input file failed, result not match")
+func TestFail(t *testing.T) {
+	for _, test := range testsFail {
+		t.Run("", func(t *testing.T) {
+			_, err := uniq(test.input, test.options)
+			require.Error(t, err, "Expected an error, but got none.")
+		})
 	}
 }
 
-func TestFailInputFile(t *testing.T) {
-	in, err := os.Open("NotExistsFile.txt")
-	if err == nil {
-		t.Errorf("Testing wrong input file failed: expected error")
-	}
-	defer in.Close()
+var defaultInput = []string{
+	"I love music.",
+	"I love music.",
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
+	"Thanks.",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
 }
 
-func TestOkInputOutputFiles(t *testing.T) {
-	in, err := os.Open("testdata/input.txt")
-	if err != nil {
-		t.Errorf("Testing input/output files failed: %s", err)
-	}
-	defer in.Close()
-
-	out, err := os.Create("testdata/output.txt")
-	if err != nil {
-		t.Errorf("Testing input/output files failed: %s", err)
-	}
-
-	options := Options{}
-
-	err = uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing input/output files failed: %s", err)
-	}
-
-	var result string
-	out.Close()
-	out, err = os.Open("testdata/output.txt")
-	if err != nil {
-		t.Errorf("Testing input/output files failed: %s", err)
-	}
-	scanner := bufio.NewScanner(out)
-	for scanner.Scan() {
-		result += scanner.Text() + "\n"
-	}
-
-	if result != defaultResult {
-		t.Error("Testing input/output files failed, result not match")
-	}
+var defaultResult = []string{
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"Thanks.",
+	"I love music of Kartik.",
 }
 
-func TestOkCount(t *testing.T) {
-	in := bytes.NewBufferString(countInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{Count: true}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing count failed: %s", err)
-	}
-	result := out.String()
-	if result != countResult {
-		t.Error("Testing count failed, result not match")
-	}
+var countInput = []string{
+	"I love music.",
+	"I love music.",
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
+	"Thanks.",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
 }
 
-func TestOkDuplicate(t *testing.T) {
-	in := bytes.NewBufferString(duplicateInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{Duplicate: true}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing duplicate failed: %s", err)
-	}
-	result := out.String()
-	if result != duplicateResult {
-		t.Error("Testing duplicate failed, result not match")
-	}
+var countResult = []string{
+	"3 I love music.",
+	"1 ",
+	"2 I love music of Kartik.",
+	"1 Thanks.",
+	"2 I love music of Kartik.",
 }
 
-func TestOkUnique(t *testing.T) {
-	in := bytes.NewBufferString(uniqueInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{Unique: true}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing unique failed: %s", err)
-	}
-	result := out.String()
-	if result != uniqueResult {
-		t.Error("Testing unique failed, result not match")
-	}
+var duplicateInput = []string{
+	"I love music.",
+	"I love music.",
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
+	"Thanks.",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
 }
 
-func TestOkIgnoreCase(t *testing.T) {
-	in := bytes.NewBufferString(ignoreCaseInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{IgnoreCase: true}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing ignore case failed: %s", err)
-	}
-	result := out.String()
-	if result != ignoreCaseResult {
-		t.Error("Testing ignore case failed, result not match")
-	}
+var duplicateResult = []string{
+	"I love music.",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
 }
 
-func TestOkSkipFields(t *testing.T) {
-	in := bytes.NewBufferString(skipFieldsInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{SkipFields: 1}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing skip fields failed: %s", err)
-	}
-	result := out.String()
-	if result != skipFieldsResult {
-		t.Error("Testing skip fields failed, result not match")
-	}
+var uniqueInput = []string{
+	"I love music.",
+	"I love music.",
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
+	"Thanks.",
+	"I love music of Kartik.",
+	"I love music of Kartik.",
 }
 
-func TestOkSkipChars(t *testing.T) {
-	in := bytes.NewBufferString(skipCharsInpit)
-	out := bytes.NewBuffer(nil)
-	options := Options{SkipChars: 1}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing skip chars failed: %s", err)
-	}
-	result := out.String()
-	if result != skipCharsResult {
-		t.Error("Testing skip chars failed, result not match")
-	}
+var uniqueResult = []string{
+	"",
+	"Thanks.",
 }
 
-func TestOkSkipFieldsChars(t *testing.T) {
-	in := bytes.NewBufferString(skipFieldsCharsInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{SkipFields: 1, SkipChars: 1}
-	err := uniq(in, out, options)
-	if err != nil {
-		t.Errorf("Testing skip fields and chars failed: %s", err)
-	}
-	result := out.String()
-	if result != skipFieldsCharsResult {
-		t.Error("Testing skip fields and chars failed, result not match")
-	}
+var ignoreCaseInput = []string{
+	"I LOVE MUSIC.",
+	"I love music.",
+	"I LoVe MuSiC.",
+	"",
+	"I love MuSIC of Kartik.",
+	"I love music of kartik.",
+	"Thanks.",
+	"I love music of kartik.",
+	"I love MuSIC of Kartik.",
 }
 
-func TestFailWrong(t *testing.T) {
-	in, err := os.Open("NotExistsFile.txt")
-	if err == nil {
-		t.Errorf("Testing wrong input file failed: expected error")
-	}
-	defer in.Close()
+var ignoreCaseResult = []string{
+	"I LOVE MUSIC.",
+	"",
+	"I love MuSIC of Kartik.",
+	"Thanks.",
+	"I love music of kartik.",
 }
 
-func TestFailWrongOptions(t *testing.T) {
-	in := bytes.NewBufferString(defaultInput)
-	out := bytes.NewBuffer(nil)
-	options := Options{Count: true, Duplicate: true}
-	err := uniq(in, out, options)
-	if err == nil {
-		t.Error("Testing wrong options failed: expected error")
-	}
-	options = Options{Count: true, Unique: true}
-	err = uniq(in, out, options)
-	if err == nil {
-		t.Error("Testing wrong options failed: expected error")
-	}
-	options = Options{Unique: true, Duplicate: true}
-	err = uniq(in, out, options)
-	if err == nil {
-		t.Error("Testing wrong options failed: expected error")
-	}
-	options = Options{SkipFields: -10}
-	err = uniq(in, out, options)
-	if err == nil {
-		t.Error("Testing wrong options failed: expected error")
-	}
-	options = Options{SkipChars: -1}
-	err = uniq(in, out, options)
-	if err == nil {
-		t.Error("Testing wrong options failed: expected error")
-	}
+var skipFieldsInput = []string{
+	"We love music.",
+	"I love music.",
+	"They love music.",
+	"",
+	"I love music of Kartik.",
+	"We love music of Kartik.",
+	"Thanks.",
+}
+
+var skipFieldsResult = []string{
+	"We love music.",
+	"",
+	"I love music of Kartik.",
+	"Thanks.",
+}
+
+var skipCharsInput = []string{
+	"I love music.",
+	"A love music.",
+	"C love music.",
+	"",
+	"I love music of Kartik.",
+	"We love music of Kartik.",
+	"Thanks.",
+}
+
+var skipCharsResult = []string{
+	"I love music.",
+	"",
+	"I love music of Kartik.",
+	"We love music of Kartik.",
+	"Thanks.",
+}
+
+var skipFieldsCharsInput = []string{
+	"One I love music.",
+	"Two A love music.",
+	"Three C love music.",
+	"",
+	"I love music of Kartik.",
+	"We love music of Kartik.",
+	"Thanks.",
+}
+
+var skipFieldsCharsResult = []string{
+	"One I love music.",
+	"",
+	"I love music of Kartik.",
+	"Thanks.",
 }
