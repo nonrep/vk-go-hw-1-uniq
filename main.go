@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/nonrep/go-homework-1-uniq/uniq"
 )
 
-func flagParser() (args []string, options Options) {
+// flagParser извлекает определенные флаги командной строки, возвращает набор флагов и неопознанные параметры командой строки.
+func flagParser() (args []string, options uniq.Options) {
 	count := flag.Bool("c", false, "count")
 	duplicate := flag.Bool("d", false, "duplicate")
 	unique := flag.Bool("u", false, "unique")
@@ -19,7 +22,7 @@ func flagParser() (args []string, options Options) {
 
 	flag.Parse()
 
-	options = Options{
+	options = uniq.Options{
 		Count:      *count,
 		Duplicate:  *duplicate,
 		Unique:     *unique,
@@ -31,14 +34,15 @@ func flagParser() (args []string, options Options) {
 	return flag.Args(), options
 }
 
+// argsParser считывает неопознанные аргументы командой строки после выполнения flagParser, ожидает текстовые файлы.
 func argsParser(args []string) (in, out *os.File, err error) {
 	in = os.Stdin
 	out = os.Stdout
 
-	// если 2 аргумента, то необходимо выполнить и case 2, и case 1, поэтому fallthrough
+	// Если 2 аргумента, то необходимо выполнить и case 2, и case 1, поэтому fallthrough.
 	switch len(args) {
 	case 0:
-		// ничего не делаем
+		// Ничего не делаем.
 	case 2:
 		out, err = os.Create(args[1])
 		if err != nil {
@@ -57,6 +61,7 @@ func argsParser(args []string) (in, out *os.File, err error) {
 	return in, out, nil
 }
 
+// getStrings считывает строки из входного потока, возвращает слайс строк.
 func getStrings(input io.Reader) (strings []string) {
 	in := bufio.NewScanner(input)
 	for in.Scan() {
@@ -78,7 +83,7 @@ func main() {
 
 	strings := getStrings(in)
 
-	result, err := uniq(strings, options)
+	result, err := uniq.Uniq(strings, options)
 	if err != nil {
 		fmt.Println(err)
 		return
