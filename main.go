@@ -62,12 +62,15 @@ func argsParser(args []string) (in, out *os.File, err error) {
 }
 
 // getStrings считывает строки из входного потока, возвращает слайс строк.
-func getStrings(input io.Reader) (strings []string) {
+func getStrings(input io.Reader) (strings []string, err error) {
 	in := bufio.NewScanner(input)
 	for in.Scan() {
 		strings = append(strings, in.Text())
 	}
-	return strings
+	if err := in.Err(); err != nil {
+		return strings, err
+	}
+	return strings, nil
 }
 
 func main() {
@@ -81,7 +84,11 @@ func main() {
 	defer in.Close()
 	defer out.Close()
 
-	strings := getStrings(in)
+	strings, err := getStrings(in)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	result, err := uniq.Uniq(strings, options)
 	if err != nil {
